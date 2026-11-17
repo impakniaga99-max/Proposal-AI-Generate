@@ -1,0 +1,6 @@
+{
+  "name": "Penjana Kertas Kerja AI - Impak Niaga",
+  "description": "Sistem penjanaan kertas kerja cadangan program latihan korporat berkuasa AI oleh Impak Niaga dengan pratonton A4 WYSIWYG dan muat turun PDF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-navy: #002147;
+  --color-navy-light: #0a2f5c;
+  --color-navy-dark: #00152e;
+  --color-gold: #D4AF37;
+  --color-gold-dark: #b08d26;
+  --color-gold-light: #e5c454;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: #f8fafc;
+    color: #0f172a;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Pure Hex/RGB Paginated A4 Sheet Styling (100% html2canvas-safe without oklch) */
+.a4-pages-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+
+.a4-page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 16mm 18mm;
+  margin: 0 auto;
+  background-color: #ffffff;
+  color: #111827;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06);
+  border: 1px solid #cbd5e1;
+  font-family: Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+.a4-page-body {
+  flex: 1 1 auto;
+}
+
+.a4-page h1 {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 18pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin: 0 0 4px 0;
+  color: #002147;
+  line-height: 1.2;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.a4-page h2.doc-subtitle {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin: 4px 0 3px 0;
+  color: #111827;
+  text-align: center;
+}
+
+.a4-page h2.section-heading {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 14px;
+  margin-bottom: 7px;
+  border-bottom: 1.5px solid #002147;
+  padding-bottom: 3px;
+  color: #002147;
+  letter-spacing: 0.015em;
+}
+
+.a4-page h3.sub-heading {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  font-weight: 700;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  color: #002147;
+}
+
+.a4-page p,
+.a4-page li,
+.a4-page td {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9.8pt;
+  line-height: 1.5;
+  color: #1f2937;
+}
+
+.a4-page p.prose-paragraph {
+  text-align: justify;
+  margin-bottom: 7px;
+}
+
+.a4-page ol {
+  list-style-type: decimal;
+  padding-left: 18px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.a4-page ol li {
+  margin-bottom: 3.5px;
+  padding-left: 3px;
+}
+
+.a4-page table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+.a4-page th,
+.a4-page td {
+  font-family: Arial, Helvetica, sans-serif;
+  border: 1px solid #cbd5e1;
+  padding: 5.5px 8px;
+  font-size: 9pt;
+  vertical-align: top;
+}
+
+.a4-page th {
+  background-color: #002147;
+  color: #ffffff;
+  font-weight: 700;
+  text-align: center;
+  border-color: #002147;
+}
+
+.a4-page .num-cell {
+  font-family: Arial, Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .a4-pages-stack {
+    display: block;
+    gap: 0;
+  }
+  .a4-page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 15mm 18mm;
+    margin: 0;
+    border: none !important;
+    box-shadow: none !important;
+    page-break-after: always;
+    break-after: page;
+  }
+  .a4-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+}

@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ms" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penjana Kertas Kerja AI - Impak Niaga</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            DEFAULT: '#002147',
+                            light: '#0a2f5c',
+                            dark: '#00152e'
+                        },
+                        gold: {
+                            DEFAULT: '#D4AF37',
+                            light: '#eacc68',
+                            dark: '#b08d26'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background for contrast */
+        }
+        
+        /* A4 Paper Styles - WYSIWYG */
+        #kertasKerjaContent {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25.4mm; /* Standard 1 inch margin */
+            margin: 0 auto;
+            background-color: white;
+            color: black;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform-origin: top center;
+            transition: transform 0.3s ease;
+        }
+
+        /* Typography inside A4 */
+        #kertasKerjaContent h1 { font-size: 18pt; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; color: #000; line-height: 1.2; text-align: center; }
+        #kertasKerjaContent h2 { font-size: 14pt; font-weight: 700; text-transform: uppercase; margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #000; padding-bottom: 2px; color: #000; }
+        #kertasKerjaContent h3 { font-size: 12pt; font-weight: 700; margin-top: 1rem; margin-bottom: 0.25rem; color: #000; }
+        #kertasKerjaContent p, #kertasKerjaContent li, #kertasKerjaContent td { font-size: 11pt; line-height: 1.5; text-align: justify; color: #000; }
+        #kertasKerjaContent ul { list-style-type: disc; padding-left: 1.2rem; margin-bottom: 0.5rem; }
+        #kertasKerjaContent ol { list-style-type: decimal; padding-left: 1.2rem; margin-bottom: 0.5rem; }
+        
+        /* Tables in A4 */
+        #kertasKerjaContent table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; margin-bottom: 1rem; }
+        #kertasKerjaContent th, #kertasKerjaContent td { border: 1px solid #000; padding: 8px; font-size: 10pt; text-align: left; vertical-align: top; }
+        #kertasKerjaContent th { background-color: #f0f0f0; font-weight: 700; text-align: center; }
+
+        /* Mobile Adjustments for Preview */
+        @media (max-width: 768px) {
+            #kertasKerjaContent {
+                width: 100%;
+                padding: 15mm;
+                min-height: auto;
+                transform: scale(1);
+            }
+            .container { padding-left: 1rem; padding-right: 1rem; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #D4AF37; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #b08d26; }
+
+        /* Animation */
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 leading-normal min-h-screen flex flex-col">
+
+    <!-- Navbar / Header -->
+    <nav class="bg-navy shadow-lg border-b-4 border-gold sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <!-- Logo Image -->
+                <img src="https://i.imgur.com/AhV4wIE.png" alt="Logo Impak Niaga" class="h-12 w-auto object-contain bg-white rounded-lg p-1 shadow-sm">
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-white tracking-wide leading-tight">Impak Niaga</h1>
+                    <p class="text-gold text-xs font-medium tracking-wider uppercase">Penjana Kertas Kerja AI</p>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto py-8 md:py-12 flex-grow">
+        
+        <div class="grid lg:grid-cols-12 gap-8">
+            
+            <!-- Left Column: Input Form -->
+            <section class="lg:col-span-4 xl:col-span-3">
+                <div class="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200 sticky top-28">
+                    <div class="bg-navy px-6 py-4 border-b border-navy-light">
+                        <h2 class="text-lg font-semibold text-white flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Maklumat Program
+                        </h2>
+                    </div>
+                    
+                    <form id="kertasKerjaForm" class="p-6 space-y-5">
+                        <!-- Language Selection -->
+                        <div>
+                            <label for="bahasa" class="block mb-1.5 text-xs font-bold text-navy uppercase tracking-wide">Bahasa</label>
+                            <select id="bahasa" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 transition-colors">
+                                <option value="melayu">Bahasa Melayu</option>
+                                <option value="english">English</option>
+                            </select>
+                        </div>
+
+                        <!-- Basic Info -->
+                        <div>
+                            <label for="namaProgram" class="block mb-1.5 text-xs font-bold text-navy uppercase tracking-wide">Nama Program</label>
+                            <input type="text" id="namaProgram" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5" placeholder="Contoh: Kursus Kepimpinan 2025" required>
+                        </div>
+                        
+                        <div>
+                            <label for="namaSyarikat" class="block mb-1.5 text-xs font-bold text-navy uppercase tracking-wide">Nama Syarikat</label>
+                            <input type="text" id="namaSyarikat" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5" placeholder="Contoh: ABC Sdn Bhd" required>
+                        </div>
+
+                        <div>
+                            <label for="huraianProgram" class="block mb-1.5 text-xs font-bold text-navy uppercase tracking-wide">Huraian Ringkas</label>
+                            <textarea id="huraianProgram" rows="3" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5" placeholder="Objektif dan sasaran..." required></textarea>
+                        </div>
+
+                        <!-- Grid Inputs -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="bilanganHari" class="block mb-1.5 text-xs font-bold text-navy uppercase tracking-wide">Hari</label>
+                                <input type="number" id="bilanganHari" min="1" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5" value="2" required>
+                            </div>
+                            <div>
+                                <label for="bilanganPeserta" class="block mb-1.5 text-xs font-bold text-navy uppercase tracking-wide">Peserta</label>
+                                <input type="number" id="bilanganPeserta" min="1" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5" value="30" required>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                             <div>
+                                <label for="tarikhMula" class="block mb-1.5 text-xs font-bold text-navy uppercase tracking-wide">Mula</label>
+                                <input type="date" id="tarikhMula" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5" required>
+                            </div>
+                            <div>
+                                <label for="tarikhAkhir" class="block mb-1.5 text-xs font-bold text-navy uppercase tracking-wide">Tamat</label>
+                                <input type="date" id="tarikhAkhir" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="lokasiProgram" class="block mb-1.5 text-xs font-bold text-navy uppercase tracking-wide">Lokasi</label>
+                            <select id="lokasiProgram" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5">
+                                <option>Hotel</option>
+                                <option>Dewan Seminar</option>
+                                <option>Tempat Sendiri</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="bajetPerPeserta" class="block mb-1.5 text-xs font-bold text-navy uppercase tracking-wide">Bajet / Peserta (RM)</label>
+                            <input type="number" id="bajetPerPeserta" min="0" step="10" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5" value="250" required>
+                        </div>
+
+                        <!-- Dynamic Section -->
+                        <div id="sesiTambahanWrapper" class="hidden p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <label class="block mb-2 text-xs font-bold text-navy uppercase tracking-wide">Sesi Tambahan</label>
+                            <div id="sesiMalamContainer" class="space-y-2"></div>
+                        </div>
+
+                        <!-- Action Button -->
+                        <button type="submit" class="w-full text-navy bg-gold hover:bg-gold-light focus:ring-4 focus:ring-gold-light font-bold rounded-lg text-sm px-5 py-3 text-center flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                            <span id="submitIcon" class="mr-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                                </svg>
+                            </span>
+                            <svg id="loadingSpinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-navy hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span id="buttonText">Jana Kertas Kerja</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+            
+            <!-- Right Column: Output Preview -->
+            <section class="lg:col-span-8 xl:col-span-9">
+                <!-- Welcome State -->
+                <div id="welcomeState" class="flex flex-col items-center justify-center h-full text-center text-gray-400 py-20 bg-white rounded-xl border-2 border-dashed border-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 mb-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 class="text-xl font-medium text-gray-500">Sedia untuk menjana</h3>
+                    <p class="max-w-md mt-2 text-sm">Isi maklumat di sebelah kiri dan klik butang untuk melihat kertas kerja profesional anda dijana serta-merta.</p>
+                </div>
+
+                <!-- Output Display (Hidden initially) -->
+                <div id="outputSection" class="hidden space-y-6">
+                    <!-- Control Bar -->
+                    <div class="bg-white p-4 rounded-xl shadow-lg border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-28 z-40">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                            <h3 class="font-bold text-navy">Dokumen Berjaya Dijana</h3>
+                        </div>
+                        <button id="exportPdfBtn" class="w-full sm:w-auto bg-navy hover:bg-navy-light text-white font-medium py-2.5 px-6 rounded-lg flex items-center justify-center transition-all duration-300 shadow hover:shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Muat Turun PDF
+                        </button>
+                    </div>
+
+                    <!-- Paper Preview Container (Scrollable horizontally on mobile) -->
+                    <div class="w-full overflow-x-auto pb-8 flex justify-center bg-gray-200/50 p-4 rounded-xl border border-gray-200">
+                        <div id="kertasKerjaContent" class="fade-in">
+                            <!-- Content generated here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+    
+    <footer class="bg-navy text-white py-6 mt-auto border-t border-navy-light">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-sm opacity-80">&copy; 2025 Penjana Kertas Kerja AI. Dikuasakan oleh <span class="text-gold font-bold">Impak Niaga</span>.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Configuration
+        const form = document.getElementById('kertasKerjaForm');
+        const outputSection = document.getElementById('outputSection');
+        const welcomeState = document.getElementById('welcomeState');
+        const kertasKerjaContent = document.getElementById('kertasKerjaContent');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const submitIcon = document.getElementById('submitIcon');
+        const buttonText = document.getElementById('buttonText');
+        const bahasaSelect = document.getElementById('bahasa');
+        const tarikhMulaInput = document.getElementById('tarikhMula');
+        const bilanganHariInput = document.getElementById('bilanganHari');
+
+        // IMPORTANT: API Key is handled by environment, keep empty string here
+        const apiKey = ""; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        let selectedLanguage = 'melayu';
+
+        // Translations & Labels
+        const labels = {
+            melayu: {
+                proposalTitle: "KERTAS KERJA CADANGAN",
+                proposalFor: "UNTUK",
+                programHandling: "PENGENDALIAN PROGRAM",
+                introTitle: "1.0 PENGENALAN",
+                objectivesTitle: "2.0 OBJEKTIF PROGRAM",
+                objectivesIntro: "Setelah tamat program ini, para peserta dijangka akan dapat:",
+                methodsTitle: "3.0 KAEDAH PENGAJARAN",
+                methodsIntro: "Bagi memastikan keberkesanan maksimum, program ini akan menggunakan pendekatan pembelajaran bersepadu (blended learning) yang interaktif dan berpusatkan peserta. Antara kaedah yang akan digunakan ialah:",
+                outcomesTitle: "4.0 HASIL PROGRAM",
+                outcomesIntro: "Program ini direka untuk memberikan impak yang signifikan bukan sahaja kepada individu, tetapi juga kepada organisasi secara keseluruhan. Hasil yang dijangkakan termasuk:",
+                modulesTitle: "5.0 CADANGAN MODUL",
+                module: "Modul",
+                tentativeTitle: "6.0 CADANGAN TENTATIF PROGRAM",
+                costTitle: "7.0 PERINCIAN KOS",
+                conclusionTitle: "8.0 PENUTUP",
+                preparedBy: "Disediakan oleh,",
+                consultantTitle: "(PERUNDING LATIHAN)",
+                day: "HARI",
+                time: "Masa",
+                activity: "Aktiviti",
+                registration: "Pendaftaran & Sarapan Pagi",
+                session1_intro: "Pengenalan & Pecah Suasana",
+                session1_module: "Modul",
+                morningBreak: "Minum Pagi",
+                session2_module: "Modul",
+                lunchBreak: "Makan Tengahari, Rehat & Solat Zohor",
+                session3: "Latihan Amali / Perbincangan Kumpulan",
+                afternoonBreak: "Minum Petang & Solat Asar",
+                session4: "Rumusan & Sesi Soal Jawab",
+                eveningRest: "Rehat, Makan Malam & Solat",
+                eveningSession: "Sesi Malam: Aktiviti Santai / Sesi Perkongsian",
+                costIntro: "Berikut adalah perincian anggaran kos bagi program ini:",
+                item: "Perkara",
+                calculation: "Pengiraan",
+                totalRM: "Jumlah (RM)",
+                speakerFee: "Fee Penceramah Profesional",
+                participantPackage: "Pakej Latihan Peserta (Makan, Bahan, Sijil)",
+                logisticsCost: "Kos Logistik & Lokasi",
+                subTotal: "Sub-Jumlah",
+                contingency: "Kontigensi (10%)",
+                grandTotal: "JUMLAH KESELURUHAN",
+                costNote: "*Nota: Anggaran kos ini adalah berdasarkan maklumat yang diberikan dan tertakluk kepada perubahan. Sebut harga rasmi akan dikeluarkan selepas perbincangan lanjut.",
+                page: "Muka Surat"
+            },
+            english: {
+                proposalTitle: "PROPOSAL PAPER",
+                proposalFor: "FOR",
+                programHandling: "CONDUCTING PROGRAM",
+                introTitle: "1.0 INTRODUCTION",
+                objectivesTitle: "2.0 PROGRAM OBJECTIVES",
+                objectivesIntro: "Upon completion of this program, participants are expected to be able to:",
+                methodsTitle: "3.0 TEACHING METHODS",
+                methodsIntro: "To ensure maximum effectiveness, this program will use an interactive and participant-centered blended learning approach. The methods to be used include:",
+                outcomesTitle: "4.0 PROGRAM OUTCOMES",
+                outcomesIntro: "This program is designed to have a significant impact not only on individuals but also on the organization as a whole. Expected outcomes include:",
+                modulesTitle: "5.0 MODULE PROPOSAL",
+                module: "Module",
+                tentativeTitle: "6.0 PROPOSED PROGRAM TENTATIVE",
+                costTitle: "7.0 COST DETAILS",
+                conclusionTitle: "8.0 CONCLUSION",
+                preparedBy: "Prepared by,",
+                consultantTitle: "(TRAINING CONSULTANT)",
+                day: "DAY",
+                time: "Time",
+                activity: "Activity",
+                registration: "Registration & Breakfast",
+                session1_intro: "Introduction & Ice Breaking",
+                session1_module: "Module",
+                morningBreak: "Morning Break",
+                session2_module: "Module",
+                lunchBreak: "Lunch, Rest & Zohor Prayer",
+                session3: "Practical Training / Group Discussion",
+                afternoonBreak: "Afternoon Break & Asar Prayer",
+                session4: "Summary & Q&A Session",
+                eveningRest: "Rest, Dinner & Prayers",
+                eveningSession: "Evening Session: Casual Activity / Sharing Session",
+                costIntro: "The following is the estimated cost breakdown for this program:",
+                item: "Item",
+                calculation: "Calculation",
+                totalRM: "Total (RM)",
+                speakerFee: "Professional Speaker's Fee",
+                participantPackage: "Participant Training Package (Meals, Materials, Certificate)",
+                logisticsCost: "Logistics & Venue Costs",
+                subTotal: "Sub-Total",
+                contingency: "Contingency (10%)",
+                grandTotal: "GRAND TOTAL",
+                costNote: "*Note: This cost estimate is based on the information provided and is subject to change. An official quotation will be issued after further discussion.",
+                page: "Page"
+            }
+        };
+
+        // Main Form Handler
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            toggleLoading(true);
+
+            // Harvest Input Data
+            selectedLanguage = bahasaSelect.value;
+            const bahasa = selectedLanguage;
+            const namaProgram = document.getElementById('namaProgram').value;
+            const namaSyarikat = document.getElementById('namaSyarikat').value;
+            const huraianProgram = document.getElementById('huraianProgram').value;
+            const bilanganHari = parseInt(document.getElementById('bilanganHari').value);
+            const bilanganPeserta = parseInt(document.getElementById('bilanganPeserta').value);
+            const tarikhMula = new Date(tarikhMulaInput.value);
+            const lokasiProgram = document.getElementById('lokasiProgram').value;
+            const bajetPerPeserta = parseFloat(document.getElementById('bajetPerPeserta').value);
+            
+            // Get selected night sessions
+            const malamCheckboxes = document.querySelectorAll('.sesi-malam-checkbox:checked');
+            const sesiMalamAktif = Array.from(malamCheckboxes).map(cb => parseInt(cb.value));
+
+            try {
+                // Construct Prompt
+                const languageInstruction = bahasa === 'english'
+                    ? 'Generate the entire response in English. All JSON keys and values must be in English.'
+                    : 'Jana keseluruhan respons dalam Bahasa Melayu. Semua kunci dan nilai JSON mestilah dalam Bahasa Melayu.';
+
+                const prompt = `
+                    Anda adalah seorang perunding latihan korporat profesional dari Impak Niaga. Tugas anda adalah untuk menyediakan kandungan untuk sebuah kertas kerja berdasarkan maklumat yang diberikan. ${languageInstruction} Sila berikan jawapan dalam format JSON yang sah sahaja tanpa sebarang teks atau format markdown tambahan.
+
+                    Maklumat Program:
+                    - Nama Program: ${namaProgram}
+                    - Huraian Program: ${huraianProgram}
+                    - Sasaran Syarikat: ${namaSyarikat}
+
+                    Sila jana kandungan untuk bahagian-bahagian berikut:
+                    1.  **Pengenalan**: Huraikan permasalahan umum yang relevan dengan program ini.
+                    2.  **Objektif Program**: Senaraikan 5 objektif SMART.
+                    3.  **Kaedah Pengajaran**: Senaraikan 4-5 kaedah pengajaran interaktif.
+                    4.  **Hasil Program**: Huraikan 4-5 hasil positif untuk peserta dan syarikat.
+                    5.  **Cadangan Modul**: Cadangkan EMPAT modul. Setiap modul perlu ada nama dan 3 topik utama.
+                    6.  **Penutup**: Tulis penutup yang meyakinkan.
+
+                    Struktur JSON yang diperlukan:
+                    {
+                      "pengenalan": "...",
+                      "objektif": ["...", "...", "...", "...", "..."],
+                      "kaedah": ["...", "...", "...", "...", "..."],
+                      "hasil": ["...", "...", "...", "...", "..."],
+                      "modul": [
+                        { "namaModul": "...", "pecahanTajuk": ["...", "...", "..."] },
+                        { "namaModul": "...", "pecahanTajuk": ["...", "...", "..."] },
+                        { "namaModul": "...", "pecahanTajuk": ["...", "...", "..."] },
+                        { "namaModul": "...", "pecahanTajuk": ["...", "...", "..."] }
+                      ],
+                      "penutup": "..."
+                    }
+                `;
+
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Ralat API: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                const textContent = result.candidates[0].content.parts[0].text;
+                
+                // Parse JSON Safely
+                const jsonStart = textContent.indexOf('{');
+                const jsonEnd = textContent.lastIndexOf('}');
+                if (jsonStart === -1 || jsonEnd === -1) {
+                    throw new Error("Kandungan JSON yang sah tidak ditemui dalam respons AI.");
+                }
+                const jsonString = textContent.substring(jsonStart, jsonEnd + 1);
+                const cleanedJsonString = jsonString.replace(/,\s*([}\]])/g, "$1"); // remove trailing commas
+
+                let aiContent;
+                try {
+                    aiContent = JSON.parse(cleanedJsonString);
+                } catch (error) {
+                    // Last resort attempt if cleaning failed
+                    try {
+                        aiContent = JSON.parse(jsonString); 
+                    } catch(e) {
+                        throw new Error("Respons AI tidak mengandungi format JSON yang sah.");
+                    }
+                }
+                
+                // Generate Content
+                const tentatifHTML = generateTentatif(tarikhMula, bilanganHari, sesiMalamAktif, bahasa);
+                const bajetHTML = generateBajet(bilanganHari, bilanganPeserta, bajetPerPeserta, lokasiProgram, bahasa);
+
+                displayKertasKerja(aiContent, { namaProgram, namaSyarikat, tentatifHTML, bajetHTML }, bahasa);
+
+                // Show UI
+                welcomeState.classList.add('hidden');
+                outputSection.classList.remove('hidden');
+                
+                // Scroll specifically to output on mobile
+                if(window.innerWidth < 1024) {
+                    outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+            } catch (error) {
+                console.error("Ralat semasa menjana kandungan:", error);
+                alert("Maaf, terdapat masalah semasa menjana kertas kerja. Sila cuba lagi.\n\n" + error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        });
+        
+        function toggleLoading(isLoading) {
+            const btn = form.querySelector('button[type="submit"]');
+            if (isLoading) {
+                loadingSpinner.classList.remove('hidden');
+                submitIcon.classList.add('hidden');
+                buttonText.textContent = 'Sedang Menjana...';
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+            } else {
+                loadingSpinner.classList.add('hidden');
+                submitIcon.classList.remove('hidden');
+                buttonText.textContent = 'Jana Kertas Kerja';
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        }
+
+        // Logic Generators
+        function generateTentatif(startDate, numDays, sesiMalamAktif, bahasa) {
+            const T = labels[bahasa];
+            let html = '';
+            const locale = bahasa === 'english' ? 'en-GB' : 'ms-MY';
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+            for (let i = 0; i < numDays; i++) {
+                const currentDate = new Date(startDate.getTime());
+                currentDate.setDate(startDate.getDate() + i);
+                const formattedDate = currentDate.toLocaleDateString(locale, options);
+                const hariKe = i + 1;
+                
+                html += `<h3>${T.day} ${hariKe} (${formattedDate.toUpperCase()})</h3>`;
+                html += `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 25%;">${T.time}</th>
+                                <th>${T.activity}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>08:30 pagi - 09:00 pagi</td><td>${T.registration}</td></tr>
+                            <tr><td>09:00 pagi - 10:30 pagi</td><td>Sesi 1: ${i === 0 ? T.session1_intro : `${T.session1_module} ${i+1} - Bahagian A`}</td></tr>
+                            <tr><td>10:30 pagi - 11:00 pagi</td><td>${T.morningBreak}</td></tr>
+                            <tr><td>11:00 pagi - 01:00 t/hari</td><td>Sesi 2: ${i === 0 ? `${T.session2_module} 1` : `${T.session2_module} ${i+1} - Bahagian B`}</td></tr>
+                            <tr><td>01:00 t/hari - 02:30 petang</td><td>${T.lunchBreak}</td></tr>
+                            <tr><td>02:30 petang - 04:00 petang</td><td>Sesi 3: ${T.session3}</td></tr>
+                            <tr><td>04:00 petang - 04:30 petang</td><td>${T.afternoonBreak}</td></tr>
+                            <tr><td>04:30 petang - 05:30 petang</td><td>Sesi 4: ${T.session4}</td></tr>
+                            ${sesiMalamAktif.includes(hariKe) && hariKe < numDays ? `
+                            <tr><td>05:30 petang - 08:30 malam</td><td>${T.eveningRest}</td></tr>
+                            <tr><td>08:30 malam - 10:30 malam</td><td>${T.eveningSession} (${bahasa === 'melayu' ? `Malam ${hariKe}` : `Night ${hariKe}`})</td></tr>
+                            ` : ''}
+                        </tbody>
+                    </table>
+                `;
+            }
+            return html;
+        }
+
+        function generateBajet(numDays, numPeserta, bajetPerPax, lokasi, bahasa) {
+            const T = labels[bahasa];
+            const toRM = (val) => `RM ${val.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+            
+            const totalBajetKutipan = bajetPerPax * numPeserta * numDays;
+            const feePenceramah = 3500 * numDays;
+            const baki = totalBajetKutipan - feePenceramah;
+            const kontigensi = baki * 0.10;
+            const jumlahKosPakejDanLogistik = baki - kontigensi;
+
+            // Labels
+            const pakejLabel = bahasa === 'english' ? 'Participant Package & Logistics' : 'Pakej Latihan Peserta & Kos Logistik';
+            const pakejCalc = bahasa === 'english' ? 'Remaining balance after speaker fee & contingency' : 'Baki selepas yuran penceramah & kontigensi';
+            const totalLabel = bahasa === 'english' ? 'TOTAL BUDGET (COLLECTION)' : 'JUMLAH BAJET KUTIPAN';
+            const speakerCalc = bahasa === 'english' ? `RM 3,500/day × ${numDays} days` : `RM 3,500/hari × ${numDays} hari`;
+            const contingencyCalc = bahasa === 'english' ? '10% of balance' : '10% daripada baki';
+
+            return `
+                <p style="margin-bottom: 10px;">${T.costIntro}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">Bil.</th>
+                            <th style="width: 40%;">${T.item}</th>
+                            <th style="width: 35%;">${T.calculation}</th>
+                            <th style="width: 20%;">${T.totalRM}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="text-align: center;">1</td>
+                            <td>${T.speakerFee}</td>
+                            <td>${speakerCalc}</td>
+                            <td style="text-align: right;">${toRM(feePenceramah)}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: center;">2</td>
+                            <td>${pakejLabel}</td>
+                            <td>${pakejCalc}</td>
+                            <td style="text-align: right;">${toRM(jumlahKosPakejDanLogistik)}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: center;">3</td>
+                            <td>${T.contingency}</td>
+                            <td>${contingencyCalc}</td>
+                            <td style="text-align: right;">${toRM(kontigensi)}</td>
+                        </tr>
+                         <tr>
+                            <td colspan="3" style="text-align: right; font-weight: 800; background-color: #f0f0f0;">${totalLabel}</td>
+                            <td style="text-align: right; font-weight: 800; background-color: #f0f0f0;">${toRM(totalBajetKutipan)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                 <p style="font-size: 9pt; margin-top: 0.5rem; font-style: italic; color: #555;">${T.costNote}</p>
+            `;
+        }
+
+        function displayKertasKerja(aiContent, data, bahasa) {
+            const T = labels[bahasa];
+            const { namaProgram, namaSyarikat, tentatifHTML, bajetHTML } = data;
+            
+            kertasKerjaContent.innerHTML = `
+                <div style="text-align: center; margin-bottom: 2.5rem;">
+                    <h1>${T.proposalTitle}</h1>
+                    <h2 style="border: none; margin-top: 0.5rem; margin-bottom: 0;">${T.programHandling} "${namaProgram}"</h2>
+                    <h3 style="font-weight: 500; margin-top: 0.25rem;">${T.proposalFor} ${namaSyarikat}</h3>
+                </div>
+
+                <h2>${T.introTitle}</h2>
+                <p>${aiContent.pengenalan.replace(/\n/g, '<br>')}</p>
+
+                <h2>${T.objectivesTitle}</h2>
+                <p>${T.objectivesIntro}</p>
+                <ol>${aiContent.objektif.map(o => `<li>${o}</li>`).join('')}</ol>
+
+                <h2>${T.methodsTitle}</h2>
+                <p>${T.methodsIntro}</p>
+                <ol>${aiContent.kaedah.map(k => `<li>${k}</li>`).join('')}</ol>
+
+                <h2>${T.outcomesTitle}</h2>
+                <p>${T.outcomesIntro}</p>
+                <ol>${aiContent.hasil.map(h => `<li>${h}</li>`).join('')}</ol>
+
+                <h2>${T.modulesTitle}</h2>
+                ${aiContent.modul.map((mod, index) => `
+                    <div style="margin-bottom: 1rem;">
+                        <h3 style="text-transform: uppercase;">${T.module} ${index + 1}: ${mod.namaModul}</h3>
+                        <ol>${mod.pecahanTajuk.map(t => `<li>${t}</li>`).join('')}</ol>
+                    </div>
+                `).join('')}
+
+                <h2>${T.tentativeTitle}</h2>
+                ${tentatifHTML}
+
+                <h2>${T.costTitle}</h2>
+                ${bajetHTML}
+
+                <h2>${T.conclusionTitle}</h2>
+                <p>${aiContent.penutup.replace(/\n/g, '<br>')}</p>
+                
+                <div style="margin-top: 4rem; font-size: 11pt;">
+                    <p>${T.preparedBy}</p>
+                    <br><br><br>
+                    <p>....................................................<br>
+                    <strong>(${T.consultantTitle})</strong><br>
+                    <strong>Impak Niaga</strong>
+                    </p>
+                </div>
+            `;
+        }
+
+        // Export PDF
+        exportPdfBtn.addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const content = document.getElementById('kertasKerjaContent');
+            
+            // UI Feedback
+            const originalBtnContent = exportPdfBtn.innerHTML;
+            exportPdfBtn.innerHTML = `<span class="animate-pulse">Sedang Menjana...</span>`;
+            exportPdfBtn.disabled = true;
+
+            // Generate
+            html2canvas(content, {
+                scale: 2, // High quality
+                useCORS: true,
+                logging: false
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                const margin = 15; // 1.5 cm margin
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                
+                const contentWidth = pdfWidth - (margin * 2);
+                const contentHeightPerPage = pdfHeight - (margin * 2);
+
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                const ratio = canvasWidth / canvasHeight;
+
+                const totalImgWidth = contentWidth;
+                const totalImgHeight = totalImgWidth / ratio;
+                
+                let heightLeft = totalImgHeight;
+                let position = 0;
+
+                pdf.addImage(imgData, 'PNG', margin, margin, totalImgWidth, totalImgHeight);
+                heightLeft -= contentHeightPerPage;
+                
+                let pageNumber = 1;
+                const addFooter = () => {
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(150);
+                    const footerText = `${labels[selectedLanguage].page} ${pageNumber} | Impak Niaga`;
+                    const textWidth = pdf.getStringUnitWidth(footerText) * pdf.getFontSize() / pdf.internal.scaleFactor;
+                    pdf.text(footerText, pdfWidth - margin - textWidth, pdfHeight - 10);
+                };
+
+                addFooter();
+
+                while (heightLeft > 0) {
+                    position -= contentHeightPerPage;
+                    pdf.addPage();
+                    pageNumber++;
+                    pdf.addImage(imgData, 'PNG', margin, margin + position, totalImgWidth, totalImgHeight);
+                    addFooter();
+                    heightLeft -= contentHeightPerPage;
+                }
+
+                const filename = document.getElementById('namaProgram').value.replace(/[^a-zA-Z0-9]/g, '_') || 'Kertas_Kerja';
+                pdf.save(`${filename}.pdf`);
+
+                // Restore Button
+                exportPdfBtn.innerHTML = originalBtnContent;
+                exportPdfBtn.disabled = false;
+            }).catch(err => {
+                 console.error("Ralat PDF: ", err);
+                 alert("Gagal menjana PDF.");
+                 exportPdfBtn.innerHTML = originalBtnContent;
+                 exportPdfBtn.disabled = false;
+            });
+        });
+        
+        // Date & Checkbox Handlers
+        const updateTarikhAkhir = () => {
+            const days = parseInt(bilanganHariInput.value) || 1;
+            const startDateValue = tarikhMulaInput.value;
+            if (startDateValue) {
+                const startDate = new Date(startDateValue);
+                const timezoneOffset = startDate.getTimezoneOffset() * 60000;
+                const correctedStartDate = new Date(startDate.getTime() + timezoneOffset);
+                
+                const endDate = new Date(correctedStartDate.getTime());
+                endDate.setDate(correctedStartDate.getDate() + days - 1);
+                
+                document.getElementById('tarikhAkhir').valueAsDate = endDate;
+            }
+        };
+
+        const updateSesiMalamOptions = () => {
+            const bilanganHari = parseInt(bilanganHariInput.value) || 0;
+            const bahasa = bahasaSelect.value;
+            const container = document.getElementById('sesiMalamContainer');
+            const wrapper = document.getElementById('sesiTambahanWrapper');
+            
+            container.innerHTML = ''; 
+
+            if (bilanganHari < 2) {
+                wrapper.classList.add('hidden'); 
+                return;
+            }
+            
+            wrapper.classList.remove('hidden'); 
+            
+            for (let i = 1; i < bilanganHari; i++) {
+                const labelTeks = bahasa === 'melayu' ? `Malam ${i}` : `Night ${i}`;
+                const labelTeksUtama = bahasa === 'melayu' ? 'Sesi Malam' : 'Evening Session';
+
+                const checkboxHTML = `
+                <div class="flex items-center p-2 bg-white rounded border border-blue-100 hover:border-gold transition-colors">
+                   <input id="sesiMalam_${i}" type="checkbox" value="${i}" class="w-4 h-4 text-navy bg-gray-100 border-gray-300 rounded focus:ring-gold focus:ring-2 sesi-malam-checkbox cursor-pointer">
+                   <label for="sesiMalam_${i}" class="ml-3 text-sm font-medium text-navy cursor-pointer select-none">${labelTeksUtama} - ${labelTeks}</label>
+               </div>`;
+                container.innerHTML += checkboxHTML;
+            }
+        };
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+            tarikhMulaInput.valueAsDate = today;
+
+            bilanganHariInput.addEventListener('change', () => {
+                updateTarikhAkhir();
+                updateSesiMalamOptions(); 
+            });
+            tarikhMulaInput.addEventListener('change', updateTarikhAkhir);
+            bahasaSelect.addEventListener('change', updateSesiMalamOptions); 
+            
+            updateTarikhAkhir();
+            updateSesiMalamOptions();
+        });
+    </script>
+</body>
+</html>
