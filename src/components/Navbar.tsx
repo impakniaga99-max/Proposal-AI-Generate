@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, LogIn, LogOut } from 'lucide-react';
+import type { User } from 'firebase/auth';
 import type { Language } from '../types/proposal';
 import { uiLabels } from '../lib/i18n';
 
-export type WorkspaceTab = 'editor' | 'drafts' | 'guide';
+export type WorkspaceTab = 'editor' | 'branding' | 'drafts' | 'guide';
 
 interface NavbarProps {
   activeTab: WorkspaceTab;
@@ -13,6 +14,9 @@ interface NavbarProps {
   isExportingPdf: boolean;
   onExportPdf: () => void;
   draftsCount: number;
+  user: User | null;
+  onSignIn: () => void;
+  onSignOut: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -23,6 +27,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   isExportingPdf,
   onExportPdf,
   draftsCount,
+  user,
+  onSignIn,
+  onSignOut,
 }) => {
   const T = uiLabels[language];
   const [logoError, setLogoError] = useState(false);
@@ -30,11 +37,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="no-print sticky top-0 z-50 bg-white border-b border-slate-200">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">
-        {/* Zone 1: Single-line Brand Wordmark */}
+        {/* Zone 1: Brand Wordmark */}
         <button
           type="button"
           onClick={() => onSelectTab('editor')}
-          className="flex items-center gap-3 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy rounded-md py-1"
+          className="flex items-center gap-3 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy rounded-md py-1 cursor-pointer"
         >
           {!logoError ? (
             <img
@@ -54,15 +61,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </button>
 
-        {/* Zone 2: Clean Single-Line Navigation Links */}
+        {/* Zone 2: Single-Line Navigation Links */}
         <nav
           aria-label="Workspace Navigation"
-          className="hidden md:flex items-center gap-7 text-sm font-medium"
+          className="hidden lg:flex items-center gap-6 text-sm font-medium"
         >
           <button
             type="button"
             onClick={() => onSelectTab('editor')}
-            className={`py-5 border-b-2 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy ${
+            className={`py-5 border-b-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'editor'
                 ? 'border-navy text-navy font-semibold'
                 : 'border-transparent text-slate-600 hover:text-navy'
@@ -72,8 +79,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             type="button"
+            onClick={() => onSelectTab('branding')}
+            className={`py-5 border-b-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              activeTab === 'branding'
+                ? 'border-navy text-navy font-semibold'
+                : 'border-transparent text-slate-600 hover:text-navy'
+            }`}
+          >
+            {T.navBranding}
+          </button>
+          <button
+            type="button"
             onClick={() => onSelectTab('drafts')}
-            className={`py-5 border-b-2 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy ${
+            className={`py-5 border-b-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'drafts'
                 ? 'border-navy text-navy font-semibold'
                 : 'border-transparent text-slate-600 hover:text-navy'
@@ -85,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('guide')}
-            className={`py-5 border-b-2 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy ${
+            className={`py-5 border-b-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'guide'
                 ? 'border-navy text-navy font-semibold'
                 : 'border-transparent text-slate-600 hover:text-navy'
@@ -93,9 +111,29 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             {T.navGuide}
           </button>
+          {user ? (
+            <button
+              type="button"
+              onClick={onSignOut}
+              title={user.email || T.signOut}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-navy whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <span className="max-w-[140px] truncate">{user.displayName || user.email}</span>
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onSignIn}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-navy hover:underline underline-offset-4 whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <LogIn className="h-3.5 w-3.5" />
+              <span>{T.signInGoogle}</span>
+            </button>
+          )}
         </nav>
 
-        {/* Zone 3: Single Primary Action */}
+        {/* Zone 3: Single Primary CTA */}
         <div className="flex items-center shrink-0">
           <button
             type="button"
@@ -118,7 +156,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Compact Mobile Navigation Row */}
-      <div className="md:hidden border-t border-slate-100 px-4 flex items-center gap-4 overflow-x-auto">
+      <div className="lg:hidden border-t border-slate-100 px-4 flex items-center gap-4 overflow-x-auto">
         <button
           type="button"
           onClick={() => onSelectTab('editor')}
@@ -127,6 +165,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}
         >
           {T.navEditor}
+        </button>
+        <button
+          type="button"
+          onClick={() => onSelectTab('branding')}
+          className={`py-2.5 text-xs font-medium border-b-2 whitespace-nowrap shrink-0 ${
+            activeTab === 'branding' ? 'border-navy text-navy font-semibold' : 'border-transparent text-slate-600'
+          }`}
+        >
+          {T.navBranding}
         </button>
         <button
           type="button"
@@ -146,6 +193,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}
         >
           {T.navGuide}
+        </button>
+        <button
+          type="button"
+          onClick={user ? onSignOut : onSignIn}
+          className="py-2.5 text-xs font-semibold text-navy whitespace-nowrap shrink-0"
+        >
+          {user ? T.signOut : T.signInGoogle}
         </button>
       </div>
     </header>

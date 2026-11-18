@@ -1,46 +1,91 @@
 import React, { useState } from 'react';
-import { Search, Trash2, ArrowUpRight, FileText } from 'lucide-react';
-import type { Language, SavedProposalDraft } from '../types/proposal';
+import { Search, Trash2, ArrowUpRight, FileText, Cloud, HardDrive, LogIn } from 'lucide-react';
+import type { Language, ProposalStatus, SavedProposalDraft } from '../types/proposal';
 import { uiLabels } from '../lib/i18n';
-import { calculateBudgetSummary, formatRM } from '../lib/proposalUtils';
+import { calculateFullBudget, formatRM } from '../lib/proposalUtils';
 
 interface DraftsViewProps {
   drafts: SavedProposalDraft[];
   language: Language;
+  isSignedIn: boolean;
+  userEmail: string | null;
+  onSignIn: () => void;
   onOpenDraft: (draft: SavedProposalDraft) => void;
+  onUpdateStatus: (id: string, status: ProposalStatus) => void;
   onDeleteDraft: (id: string) => void;
   onBackToEditor: () => void;
 }
 
+const STATUSES: ProposalStatus[] = ['Draf', 'Dihantar', 'Diluluskan', 'Ditolak'];
+
+const STATUS_STYLES: Record<ProposalStatus, string> = {
+  Draf: 'bg-slate-100 text-slate-700 border-slate-200',
+  Dihantar: 'bg-amber-50 text-amber-800 border-amber-200',
+  Diluluskan: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  Ditolak: 'bg-red-50 text-red-800 border-red-200',
+};
+
 export const DraftsView: React.FC<DraftsViewProps> = ({
   drafts,
   language,
+  isSignedIn,
+  userEmail,
+  onSignIn,
   onOpenDraft,
+  onUpdateStatus,
   onDeleteDraft,
   onBackToEditor,
 }) => {
   const T = uiLabels[language];
+  const isEn = language === 'english';
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | ProposalStatus>('ALL');
 
   const filtered = drafts.filter((d) => {
+    const matchesStatus = statusFilter === 'ALL' || d.status === statusFilter;
     const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return (
+    const matchesQuery =
+      !q ||
       d.formData.namaProgram.toLowerCase().includes(q) ||
-      d.formData.namaSyarikat.toLowerCase().includes(q)
-    );
+      d.formData.namaSyarikat.toLowerCase().includes(q);
+    return matchesStatus && matchesQuery;
   });
 
+  const statusLabel = (s: ProposalStatus) => {
+    if (!isEn) return s;
+    if (s === 'Draf') return 'Draft';
+    if (s === 'Dihantar') return 'Sent';
+    if (s === 'Diluluskan') return 'Approved';
+    return 'Declined';
+  };
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header & Storage Mode */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy tracking-tight">
             {T.draftsHeading}
           </h1>
+          <div className="mt-1 flex items-center gap-2 text-xs text-slate-600">
+            {isSignedIn ? (
+              <>
+                <Cloud className="h-3.5 w-3.5 text-emerald-600" />
+                <span>
+                  {T.cloudSyncedLabel} · {userEmail}
+                </span>
+              </>
+            ) : (
+              <>
+                <HardDrive className="h-3.5 w-3.5 text-slate-500" />
+                <span>{T.localOnlyLabel}</span>
+              </>
+            )}
+          </div>
         </div>
-        {drafts.length > 0 && (
-          <div className="relative w-full sm:w-72">
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-64">
             <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -50,8 +95,56 @@ export const DraftsView: React.FC<DraftsViewProps> = ({
               className="w-full min-h-[40px] pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-navy"
             />
           </div>
-        )}
+        </div>
       </div>
+
+      {/* Cloud Sign-In Banner when Guest */}
+      {!isSignedIn && (
+        <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="font-display text-sm font-bold text-navy">{T.signInBannerTitle}</h2>
+            <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">{T.signInBannerDesc}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onSignIn}
+            className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 py-2 rounded-lg bg-navy text-white text-xs font-semibold hover:bg-navy-light transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            <LogIn className="h-4 w-4 text-gold" />
+            <span>{T.signInGoogle}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Status Filter Tabs */}
+      {drafts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 border border-slate-200 rounded-lg w-fit">
+          <button
+            type="button"
+            onClick={() => setStatusFilter('ALL')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+              statusFilter === 'ALL' ? 'bg-white text-navy shadow-xs' : 'text-slate-600 hover:text-navy'
+            }`}
+          >
+            {isEn ? 'All' : 'Semua'} ({drafts.length})
+          </button>
+          {STATUSES.map((st) => {
+            const count = drafts.filter((d) => d.status === st).length;
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setStatusFilter(st)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  statusFilter === st ? 'bg-white text-navy shadow-xs' : 'text-slate-600 hover:text-navy'
+                }`}
+              >
+                {statusLabel(st)} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-4">
@@ -73,6 +166,7 @@ export const DraftsView: React.FC<DraftsViewProps> = ({
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
                   <th className="py-3 px-4">{T.programNameLabel}</th>
                   <th className="py-3 px-4">{T.companyNameLabel}</th>
+                  <th className="py-3 px-4">{isEn ? 'Status' : 'Status'}</th>
                   <th className="py-3 px-4 text-right">{T.daysLabel}</th>
                   <th className="py-3 px-4 text-right">{T.participantsLabel}</th>
                   <th className="py-3 px-4 text-right">{T.liveTotalLabel}</th>
@@ -81,11 +175,8 @@ export const DraftsView: React.FC<DraftsViewProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 {filtered.map((draft) => {
-                  const budget = calculateBudgetSummary(
-                    draft.formData.bilanganHari,
-                    draft.formData.bilanganPeserta,
-                    draft.formData.bajetPerPeserta
-                  );
+                  const budget = calculateFullBudget(draft.formData);
+                  const currentStatus = draft.status || 'Draf';
                   return (
                     <tr key={draft.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 px-4 font-medium text-slate-900">
@@ -96,6 +187,22 @@ export const DraftsView: React.FC<DraftsViewProps> = ({
                         </div>
                       </td>
                       <td className="py-3 px-4 text-slate-700">{draft.formData.namaSyarikat}</td>
+                      <td className="py-3 px-4">
+                        <select
+                          aria-label="Proposal Status"
+                          value={currentStatus}
+                          onChange={(e) =>
+                            onUpdateStatus(draft.id, e.target.value as ProposalStatus)
+                          }
+                          className={`text-xs font-semibold px-2.5 py-1 rounded-md border cursor-pointer focus:outline-none ${STATUS_STYLES[currentStatus]}`}
+                        >
+                          {STATUSES.map((st) => (
+                            <option key={st} value={st} className="bg-white text-slate-900">
+                              {statusLabel(st)}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
                       <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-700">
                         {draft.formData.bilanganHari}
                       </td>
@@ -103,7 +210,7 @@ export const DraftsView: React.FC<DraftsViewProps> = ({
                         {draft.formData.bilanganPeserta}
                       </td>
                       <td className="py-3 px-4 text-right font-mono tabular-nums font-semibold text-navy">
-                        {formatRM(budget.totalBajetKutipan)}
+                        {formatRM(budget.grandTotal)}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="inline-flex items-center gap-2">

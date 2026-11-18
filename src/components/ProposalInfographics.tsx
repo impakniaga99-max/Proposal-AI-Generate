@@ -64,6 +64,7 @@ export const ExecutiveSnapshotStrip: React.FC<SnapshotStripProps> = ({
               fontWeight: 700,
               color: '#64748b',
               letterSpacing: '0.06em',
+              lineHeight: 1.35,
               marginBottom: '2px',
             }}
           >
@@ -75,6 +76,7 @@ export const ExecutiveSnapshotStrip: React.FC<SnapshotStripProps> = ({
               fontSize: '9.5pt',
               fontWeight: 700,
               color: '#002147',
+              lineHeight: 1.35,
             }}
           >
             {item.value}
@@ -123,6 +125,7 @@ export const BlendedLearningInfographic: React.FC<BlendedLearningInfographicProp
           color: '#002147',
           textTransform: 'uppercase',
           letterSpacing: '0.04em',
+          lineHeight: 1.35,
           marginBottom: '8px',
         }}
       >
@@ -153,17 +156,18 @@ export const BlendedLearningInfographic: React.FC<BlendedLearningInfographicProp
                   backgroundColor: idx % 2 === 0 ? '#002147' : '#b08d26',
                   borderRadius: '3px',
                   padding: '2px 5px',
+                  lineHeight: 1.25,
                 }}
               >
                 {step.num}
               </span>
-              <span style={{ fontSize: '8.5pt', fontWeight: 600, color: '#1e293b' }}>
+              <span style={{ fontSize: '8.5pt', fontWeight: 600, color: '#1e293b', lineHeight: 1.3 }}>
                 {step.title}
               </span>
             </div>
             <span
               className="num-cell"
-              style={{ fontSize: '8pt', fontWeight: 700, color: '#002147' }}
+              style={{ fontSize: '8pt', fontWeight: 700, color: '#002147', lineHeight: 1.3 }}
             >
               {step.ratio}
             </span>
@@ -201,6 +205,7 @@ export const ModuleRoadmapInfographic: React.FC<ModuleRoadmapInfographicProps> =
           color: '#002147',
           textTransform: 'uppercase',
           letterSpacing: '0.04em',
+          lineHeight: 1.35,
           marginBottom: '8px',
         }}
       >
@@ -235,6 +240,7 @@ export const ModuleRoadmapInfographic: React.FC<ModuleRoadmapInfographicProps> =
                 fontWeight: 700,
                 color: '#b08d26',
                 textTransform: 'uppercase',
+                lineHeight: 1.3,
               }}
             >
               {isEn ? `Module 0${idx + 1}` : `Modul 0${idx + 1}`}
@@ -244,7 +250,7 @@ export const ModuleRoadmapInfographic: React.FC<ModuleRoadmapInfographicProps> =
                 fontSize: '8pt',
                 fontWeight: 700,
                 color: '#002147',
-                lineHeight: 1.25,
+                lineHeight: 1.3,
               }}
             >
               {mod.namaModul}
@@ -278,8 +284,10 @@ export const BudgetDonutInfographic: React.FC<BudgetDonutInfographicProps> = ({
   const sum = safeSpeaker + safePackage + safeContingency || 1;
 
   const pctSpeaker = Math.round((safeSpeaker / sum) * 100);
-  const pctPackage = Math.round((safePackage / sum) * 100);
-  const pctContingency = Math.max(0, 100 - pctSpeaker - pctPackage);
+  const pctPackage =
+    safeContingency > 0 ? Math.round((safePackage / sum) * 100) : Math.max(0, 100 - pctSpeaker);
+  const pctContingency =
+    safeContingency > 0 ? Math.max(0, 100 - pctSpeaker - pctPackage) : 0;
 
   const radius = 34;
   const circumference = 2 * Math.PI * radius;
@@ -289,7 +297,7 @@ export const BudgetDonutInfographic: React.FC<BudgetDonutInfographicProps> = ({
 
   const segments = [
     {
-      label: isEn ? 'Speaker Fee' : 'Fee Penceramah',
+      label: isEn ? 'Speaker / Facilitator Fee' : 'Fee Penceramah',
       amount: speakerFee,
       pct: pctSpeaker,
       color: '#002147',
@@ -300,12 +308,16 @@ export const BudgetDonutInfographic: React.FC<BudgetDonutInfographicProps> = ({
       pct: pctPackage,
       color: '#D4AF37',
     },
-    {
-      label: isEn ? 'Contingency (10%)' : 'Kontigensi (10%)',
-      amount: contingency,
-      pct: pctContingency,
-      color: '#64748b',
-    },
+    ...(safeContingency > 0
+      ? [
+          {
+            label: isEn ? 'Contingency (10%)' : 'Kontigensi (10%)',
+            amount: contingency,
+            pct: pctContingency,
+            color: '#64748b',
+          },
+        ]
+      : []),
   ];
 
   return (

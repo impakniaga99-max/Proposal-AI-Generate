@@ -1,44 +1,83 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FileText, ArrowRight } from 'lucide-react';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import type { AIProposalContent, ProposalFormData, SavedProposalDraft } from './types/proposal';
+import type {
+  AIProposalContent,
+  BrandingSettings,
+  ProposalFormData,
+  ProposalStatus,
+  SavedProposalDraft,
+  TrainerProfile,
+} from './types/proposal';
 import { getSampleFormData, uiLabels } from './lib/i18n';
-import { calculateEndDateIso, getTodayIsoDate } from './lib/proposalUtils';
+import {
+  calculateEndDateIso,
+  calculateFullBudget,
+  getDefaultBrandingSettings,
+  getDefaultTrainerProfile,
+  getTodayIsoDate,
+} from './lib/proposalUtils';
+import { exportProposalToDocx } from './lib/docxExport';
+import {
+  auth,
+  deleteProposalFromCloud,
+  loadUserSettingsFromCloud,
+  saveProposalToCloud,
+  saveUserSettingsToCloud,
+  signInWithGoogle,
+  signOutUser,
+  subscribeUserProposals,
+  updateProposalStatusInCloud,
+} from './lib/firebase';
 import { Navbar, type WorkspaceTab } from './components/Navbar';
 import { ProposalForm } from './components/ProposalForm';
-import { A4DocumentPreview } from './components/A4DocumentPreview';
+import {
+  A4DocumentPreview,
+  type RefineActionKey,
+  type RefineSectionKey,
+} from './components/A4DocumentPreview';
+import { BrandingTrainerView } from './components/BrandingTrainerView';
 import { DraftsView } from './components/DraftsView';
 import { FormatGuideView } from './components/FormatGuideView';
 
 const DRAFTS_STORAGE_KEY = 'impak_niaga_proposal_drafts_v1';
+const BRANDING_STORAGE_KEY = 'impak_niaga_branding_v1';
+const TRAINER_STORAGE_KEY = 'impak_niaga_trainer_v1';
 
 const A4_PDF_SAFE_CSS = `
   * { box-sizing: border-box; }
   body { margin: 0; padding: 0; background-color: #ffffff; color: #111827; font-family: Arial, Helvetica, sans-serif; }
+  .no-print { display: none !important; }
   .a4-page { width: 210mm; min-height: 297mm; padding: 16mm 18mm; margin: 0; background-color: #ffffff; color: #111827; border: none; box-shadow: none; font-family: Arial, Helvetica, sans-serif; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
   .a4-page-body { flex: 1 1 auto; }
   .a4-page h1 { font-family: Arial, Helvetica, sans-serif; font-size: 18pt; font-weight: 700; text-transform: uppercase; margin: 0 0 4px 0; color: #002147; line-height: 1.2; text-align: center; letter-spacing: 0.02em; }
   .a4-page h2.doc-subtitle { font-family: Arial, Helvetica, sans-serif; font-size: 12.5pt; font-weight: 700; text-transform: uppercase; margin: 4px 0 3px 0; color: #111827; text-align: center; }
-  .a4-page h2.section-heading { font-family: Arial, Helvetica, sans-serif; font-size: 11.5pt; font-weight: 700; text-transform: uppercase; margin-top: 14px; margin-bottom: 7px; border-bottom: 1.5px solid #002147; padding-bottom: 3px; color: #002147; letter-spacing: 0.015em; }
-  .a4-page h3.sub-heading { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; font-weight: 700; margin-top: 10px; margin-bottom: 4px; color: #002147; }
-  .a4-page p, .a4-page li, .a4-page td { font-family: Arial, Helvetica, sans-serif; font-size: 9.8pt; line-height: 1.5; color: #1f2937; }
+  .a4-page h2.section-heading { font-family: Arial, Helvetica, sans-serif; font-size: 11.5pt; font-weight: 700; line-height: 1.35; text-transform: uppercase; margin-top: 12px; margin-bottom: 7px; border-bottom: 1.5px solid #002147; padding-bottom: 5px; color: #002147; letter-spacing: 0.015em; }
+  .a4-page h3.sub-heading { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; font-weight: 700; line-height: 1.35; margin-top: 9px; margin-bottom: 5px; color: #002147; }
+  .a4-page p, .a4-page li, .a4-page td { font-family: Arial, Helvetica, sans-serif; font-size: 9.6pt; line-height: 1.48; color: #1f2937; }
   .a4-page p.prose-paragraph { text-align: justify; margin-bottom: 7px; }
   .a4-page ol { list-style-type: decimal; padding-left: 18px; margin-top: 4px; margin-bottom: 8px; }
   .a4-page ol li { margin-bottom: 3.5px; padding-left: 3px; }
-  .a4-page table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 10px; }
-  .a4-page th, .a4-page td { font-family: Arial, Helvetica, sans-serif; border: 1px solid #cbd5e1; padding: 5.5px 8px; font-size: 9pt; vertical-align: top; }
+  .a4-page table { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 9px; }
+  .a4-page th, .a4-page td { font-family: Arial, Helvetica, sans-serif; border: 1px solid #cbd5e1; padding: 5.5px 8px; font-size: 8.9pt; line-height: 1.4; vertical-align: top; }
   .a4-page th { background-color: #002147; color: #ffffff; font-weight: 700; text-align: center; border-color: #002147; }
   .a4-page .num-cell { font-family: Arial, Helvetica, sans-serif; font-variant-numeric: tabular-nums; }
 `;
 
-function createDefaultFormData(): ProposalFormData {
+function createDefaultFormData(branding?: BrandingSettings): ProposalFormData {
   const today = getTodayIsoDate();
   const end = calculateEndDateIso(today, 2);
+  const prefix = branding?.refPrefix || 'IN/PROP/2026';
   return {
     bahasa: 'melayu',
     namaProgram: '',
     namaSyarikat: '',
+    namaPenerimaSurat: '',
+    noRujukan: `${prefix}/001`,
+    sektorOrganisasi: 'Korporat / GLC',
+    tahapPeserta: 'Pengurusan Pertengahan & Eksekutif',
     huraianProgram: '',
     bilanganHari: 2,
     bilanganPeserta: 30,
@@ -46,23 +85,73 @@ function createDefaultFormData(): ProposalFormData {
     tarikhAkhir: end,
     lokasiProgram: 'Hotel',
     bajetPerPeserta: 250,
+    kadarPenceramahHarian: 3500,
+    costMode: 'auto',
+    customCostItems: [],
+    diskaunPeratus: 0,
+    sertakanSst: false,
+    sertakanPerbandinganPakej: false,
+    sertakanHrdCorp: true,
+    sertakanSuratIringan: false,
+    sertakanSebutHarga: false,
     sesiMalamAktif: [],
+  };
+}
+
+function normalizeFormData(raw: Partial<ProposalFormData>, branding: BrandingSettings): ProposalFormData {
+  return {
+    ...createDefaultFormData(branding),
+    ...raw,
+    customCostItems: Array.isArray(raw.customCostItems) ? raw.customCostItems : [],
+    sesiMalamAktif: Array.isArray(raw.sesiMalamAktif) ? raw.sesiMalamAktif : [],
   };
 }
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('editor');
-  const [formData, setFormData] = useState<ProposalFormData>(createDefaultFormData);
+
+  const [branding, setBranding] = useState<BrandingSettings>(() => {
+    try {
+      const raw = localStorage.getItem(BRANDING_STORAGE_KEY);
+      return raw ? { ...getDefaultBrandingSettings(), ...JSON.parse(raw) } : getDefaultBrandingSettings();
+    } catch {
+      return getDefaultBrandingSettings();
+    }
+  });
+
+  const [trainerProfile, setTrainerProfile] = useState<TrainerProfile>(() => {
+    try {
+      const raw = localStorage.getItem(TRAINER_STORAGE_KEY);
+      return raw ? { ...getDefaultTrainerProfile(), ...JSON.parse(raw) } : getDefaultTrainerProfile();
+    } catch {
+      return getDefaultTrainerProfile();
+    }
+  });
+
+  const [formData, setFormData] = useState<ProposalFormData>(() => createDefaultFormData(branding));
   const [aiContent, setAiContent] = useState<AIProposalContent | null>(null);
+  const [activeProposalId, setActiveProposalId] = useState<string | null>(null);
+  const [activeProposalStatus, setActiveProposalStatus] = useState<ProposalStatus>('Draf');
+
   const [isGenerating, setIsGenerating] = useState(false);
+  const [refiningSection, setRefiningSection] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingDocx, setIsExportingDocx] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [justSavedDraft, setJustSavedDraft] = useState(false);
-  const [drafts, setDrafts] = useState<SavedProposalDraft[]>(() => {
+
+  const [user, setUser] = useState<User | null>(null);
+  const [cloudDrafts, setCloudDrafts] = useState<SavedProposalDraft[]>([]);
+  const [localDrafts, setLocalDrafts] = useState<SavedProposalDraft[]>(() => {
     try {
       const raw = localStorage.getItem(DRAFTS_STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as SavedProposalDraft[]) : [];
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as SavedProposalDraft[];
+      return parsed.map((d) => ({
+        ...d,
+        status: d.status || 'Draf',
+      }));
     } catch {
       return [];
     }
@@ -71,29 +160,115 @@ export default function App() {
   const documentRef = useRef<HTMLDivElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // Persist branding & trainer settings locally
   useEffect(() => {
     try {
-      localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+      localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(branding));
     } catch {
       // Ignore storage quota errors
     }
-  }, [drafts]);
+  }, [branding]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(TRAINER_STORAGE_KEY, JSON.stringify(trainerProfile));
+    } catch {
+      // Ignore storage quota errors
+    }
+  }, [trainerProfile]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(localDrafts));
+    } catch {
+      // Ignore storage quota errors
+    }
+  }, [localDrafts]);
+
+  // Listen to Firebase Auth & Cloud Firestore subscriptions
+  useEffect(() => {
+    let unsubProposals: (() => void) | null = null;
+
+    const unsubAuth = onAuthStateChanged(auth, async (nextUser) => {
+      setUser(nextUser);
+
+      if (unsubProposals) {
+        unsubProposals();
+        unsubProposals = null;
+      }
+
+      if (nextUser) {
+        unsubProposals = subscribeUserProposals(
+          nextUser.uid,
+          (items) => setCloudDrafts(items),
+          (err) => {
+            console.error('Firestore subscription error:', err);
+          }
+        );
+
+        try {
+          const settings = await loadUserSettingsFromCloud(nextUser.uid);
+          if (settings?.branding) {
+            setBranding((prev) => ({ ...prev, ...settings.branding }));
+          }
+          if (settings?.trainerProfile) {
+            setTrainerProfile((prev) => ({ ...prev, ...settings.trainerProfile }));
+          }
+        } catch (err) {
+          console.error('Failed to load cloud settings:', err);
+        }
+      } else {
+        setCloudDrafts([]);
+      }
+    });
+
+    return () => {
+      unsubAuth();
+      if (unsubProposals) unsubProposals();
+    };
+  }, []);
+
+  const displayedDrafts = user ? cloudDrafts : localDrafts;
   const UI = uiLabels[formData.bahasa];
+
+  const handleSignIn = async () => {
+    setErrorMessage(null);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      console.error('Sign in failed:', err);
+      setErrorMessage(
+        formData.bahasa === 'english'
+          ? 'Google sign-in could not be completed. Please try again.'
+          : 'Log masuk Google tidak berjaya dilengkapkan. Sila cuba semula.'
+      );
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+      setActiveProposalId(null);
+    } catch (err) {
+      console.error('Sign out failed:', err);
+    }
+  };
 
   const handleLoadSample = () => {
     const today = formData.tarikhMula || getTodayIsoDate();
     const end = calculateEndDateIso(today, 2);
-    setFormData(getSampleFormData(formData.bahasa, today, end));
+    setFormData(getSampleFormData(formData.bahasa, today, end, formData));
     setErrorMessage(null);
   };
 
   const handleReset = () => {
     setFormData((prev) => ({
-      ...createDefaultFormData(),
+      ...createDefaultFormData(branding),
       bahasa: prev.bahasa,
     }));
     setAiContent(null);
+    setActiveProposalId(null);
+    setActiveProposalStatus('Draf');
     setIsEditMode(false);
     setErrorMessage(null);
   };
@@ -116,10 +291,13 @@ export default function App() {
           bahasa: formData.bahasa,
           namaProgram: formData.namaProgram,
           namaSyarikat: formData.namaSyarikat,
+          sektorOrganisasi: formData.sektorOrganisasi,
+          tahapPeserta: formData.tahapPeserta,
           huraianProgram: formData.huraianProgram,
           bilanganHari: formData.bilanganHari,
           bilanganPeserta: formData.bilanganPeserta,
           lokasiProgram: formData.lokasiProgram,
+          sertakanHrdCorp: formData.sertakanHrdCorp,
         }),
       });
 
@@ -171,29 +349,183 @@ export default function App() {
     }
   };
 
-  const handleSaveDraft = () => {
+  const handleRefineSection = async (section: RefineSectionKey, action: RefineActionKey) => {
+    if (!aiContent || refiningSection) return;
+    setRefiningSection(section);
+    setErrorMessage(null);
+
+    try {
+      const currentContent =
+        section === 'hrdCorpNotes'
+          ? aiContent.hrdCorpNotes ||
+            (formData.bahasa === 'english'
+              ? 'This training program is structured for HRD Corp SBL-Khas claimability, facilitated by certified trainers (TTT), and incorporates pre- and post-course evaluations.'
+              : 'Program latihan ini dirangka memenuhi piawaian tuntutan skim HRD Corp (SBL-Khas), dikendalikan oleh jurulatih bertauliah (TTT), serta disokong dengan penilaian pra dan pasca kursus.')
+          : aiContent[section];
+
+      const response = await fetch('/api/refine-section', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bahasa: formData.bahasa,
+          section,
+          action,
+          currentContent,
+          context: {
+            namaProgram: formData.namaProgram,
+            namaSyarikat: formData.namaSyarikat,
+            sektorOrganisasi: formData.sektorOrganisasi,
+            tahapPeserta: formData.tahapPeserta,
+          },
+        }),
+      });
+
+      const payload = (await response.json()) as { refined?: unknown; error?: string };
+      if (!response.ok || payload.refined === undefined) {
+        throw new Error(payload.error || 'Gagal menghalus bahagian ini.');
+      }
+
+      setAiContent((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          [section]: payload.refined,
+        } as AIProposalContent;
+      });
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Gagal menghalus kandungan bahagian ini.'
+      );
+    } finally {
+      setRefiningSection(null);
+    }
+  };
+
+  const handleSaveDraft = async () => {
     if (!aiContent) return;
-    const newDraft: SavedProposalDraft = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      createdAt: new Date().toISOString(),
-      formData: { ...formData },
-      aiContent: { ...aiContent },
-    };
-    setDrafts((prev) => [newDraft, ...prev].slice(0, 25));
-    setJustSavedDraft(true);
-    setTimeout(() => setJustSavedDraft(false), 2200);
+    const budget = calculateFullBudget(formData);
+
+    if (user) {
+      const existingCloud = activeProposalId
+        ? cloudDrafts.some((d) => d.id === activeProposalId)
+        : false;
+      const docId =
+        existingCloud && activeProposalId
+          ? activeProposalId
+          : `prop_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+      try {
+        await saveProposalToCloud(
+          user.uid,
+          docId,
+          activeProposalStatus,
+          formData,
+          aiContent,
+          budget.grandTotal,
+          existingCloud
+        );
+        setActiveProposalId(docId);
+        setJustSavedDraft(true);
+        setTimeout(() => setJustSavedDraft(false), 2200);
+      } catch (err) {
+        console.error('Cloud save failed:', err);
+        setErrorMessage(
+          formData.bahasa === 'english'
+            ? 'Unable to save to cloud right now. Please try again.'
+            : 'Tidak dapat menyimpan ke pangkalan data awan buat masa ini.'
+        );
+      }
+    } else {
+      const existingLocalIdx = activeProposalId
+        ? localDrafts.findIndex((d) => d.id === activeProposalId)
+        : -1;
+      const docId =
+        existingLocalIdx >= 0 && activeProposalId
+          ? activeProposalId
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+      const nextDraft: SavedProposalDraft = {
+        id: docId,
+        createdAt:
+          existingLocalIdx >= 0 ? localDrafts[existingLocalIdx].createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: activeProposalStatus,
+        isCloud: false,
+        formData: { ...formData },
+        aiContent: { ...aiContent },
+      };
+
+      setLocalDrafts((prev) => {
+        const filtered = prev.filter((d) => d.id !== docId);
+        return [nextDraft, ...filtered].slice(0, 25);
+      });
+      setActiveProposalId(docId);
+      setJustSavedDraft(true);
+      setTimeout(() => setJustSavedDraft(false), 2200);
+    }
   };
 
   const handleOpenDraft = (draft: SavedProposalDraft) => {
-    setFormData(draft.formData);
+    setFormData(normalizeFormData(draft.formData, branding));
     setAiContent(draft.aiContent);
+    setActiveProposalId(draft.id);
+    setActiveProposalStatus(draft.status || 'Draf');
     setIsEditMode(false);
     setErrorMessage(null);
     setActiveTab('editor');
   };
 
-  const handleDeleteDraft = (id: string) => {
-    setDrafts((prev) => prev.filter((d) => d.id !== id));
+  const handleUpdateDraftStatus = async (id: string, status: ProposalStatus) => {
+    if (id === activeProposalId) {
+      setActiveProposalStatus(status);
+    }
+    if (user) {
+      try {
+        await updateProposalStatusInCloud(id, status);
+      } catch (err) {
+        console.error('Status update failed:', err);
+      }
+    } else {
+      setLocalDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, status } : d)));
+    }
+  };
+
+  const handleDeleteDraft = async (id: string) => {
+    if (id === activeProposalId) {
+      setActiveProposalId(null);
+    }
+    if (user) {
+      try {
+        await deleteProposalFromCloud(id);
+      } catch (err) {
+        console.error('Cloud delete failed:', err);
+      }
+    } else {
+      setLocalDrafts((prev) => prev.filter((d) => d.id !== id));
+    }
+  };
+
+  const handleSaveSettingsToCloud = async () => {
+    if (!user) return;
+    await saveUserSettingsToCloud(user.uid, branding, trainerProfile);
+  };
+
+  const handleExportDocx = async () => {
+    if (!aiContent) return;
+    setIsExportingDocx(true);
+    setErrorMessage(null);
+    try {
+      await exportProposalToDocx(formData, aiContent, branding, trainerProfile);
+    } catch (err) {
+      console.error('Word export failed:', err);
+      setErrorMessage(
+        formData.bahasa === 'english'
+          ? 'Failed to generate Word (.docx) file.'
+          : 'Gagal menjana fail Word (.docx).'
+      );
+    } finally {
+      setIsExportingDocx(false);
+    }
   };
 
   const handleExportPdf = async () => {
@@ -226,7 +558,10 @@ export default function App() {
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
-          onclone: (clonedDoc) => {
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 1280,
+          onclone: (clonedDoc, clonedPageEl) => {
             const stylesheets = clonedDoc.querySelectorAll('style, link[rel="stylesheet"]');
             stylesheets.forEach((node) => {
               if (node.tagName === 'LINK') {
@@ -241,6 +576,14 @@ export default function App() {
             const safeStyle = clonedDoc.createElement('style');
             safeStyle.textContent = A4_PDF_SAFE_CSS;
             clonedDoc.head.appendChild(safeStyle);
+
+            clonedPageEl.style.width = '210mm';
+            clonedPageEl.style.minHeight = '297mm';
+            clonedPageEl.style.margin = '0';
+            if (clonedPageEl.parentElement) {
+              clonedPageEl.parentElement.style.padding = '0';
+              clonedPageEl.parentElement.style.margin = '0';
+            }
           },
         });
 
@@ -287,7 +630,10 @@ export default function App() {
         hasProposal={Boolean(aiContent)}
         isExportingPdf={isExportingPdf}
         onExportPdf={handleExportPdf}
-        draftsCount={drafts.length}
+        draftsCount={displayedDrafts.length}
+        user={user}
+        onSignIn={handleSignIn}
+        onSignOut={handleSignOut}
       />
 
       <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
@@ -303,6 +649,11 @@ export default function App() {
                 isGenerating={isGenerating}
                 hasProposal={Boolean(aiContent)}
                 errorMessage={errorMessage}
+                trainerCvEnabled={trainerProfile.enabled}
+                onToggleTrainerCv={(enabled) =>
+                  setTrainerProfile((prev) => ({ ...prev, enabled }))
+                }
+                onOpenBrandingTab={() => setActiveTab('branding')}
               />
             </div>
 
@@ -326,6 +677,8 @@ export default function App() {
                 <A4DocumentPreview
                   formData={formData}
                   aiContent={aiContent}
+                  branding={branding}
+                  trainerProfile={trainerProfile}
                   onUpdateAiContent={setAiContent}
                   isEditMode={isEditMode}
                   onToggleEditMode={() => setIsEditMode((prev) => !prev)}
@@ -333,6 +686,10 @@ export default function App() {
                   justSavedDraft={justSavedDraft}
                   onExportPdf={handleExportPdf}
                   isExportingPdf={isExportingPdf}
+                  onExportDocx={handleExportDocx}
+                  isExportingDocx={isExportingDocx}
+                  onRefineSection={handleRefineSection}
+                  refiningSection={refiningSection}
                   documentRef={documentRef}
                 />
               ) : (
@@ -360,11 +717,28 @@ export default function App() {
           </div>
         )}
 
+        {activeTab === 'branding' && (
+          <BrandingTrainerView
+            language={formData.bahasa}
+            branding={branding}
+            onChangeBranding={setBranding}
+            trainerProfile={trainerProfile}
+            onChangeTrainerProfile={setTrainerProfile}
+            isSignedIn={Boolean(user)}
+            onSaveToCloud={handleSaveSettingsToCloud}
+            onBackToEditor={() => setActiveTab('editor')}
+          />
+        )}
+
         {activeTab === 'drafts' && (
           <DraftsView
-            drafts={drafts}
+            drafts={displayedDrafts}
             language={formData.bahasa}
+            isSignedIn={Boolean(user)}
+            userEmail={user?.email || null}
+            onSignIn={handleSignIn}
             onOpenDraft={handleOpenDraft}
+            onUpdateStatus={handleUpdateDraftStatus}
             onDeleteDraft={handleDeleteDraft}
             onBackToEditor={() => setActiveTab('editor')}
           />
@@ -380,7 +754,7 @@ export default function App() {
 
       <footer className="no-print bg-white border-t border-slate-200 py-5 mt-auto">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-          <span>&copy; {new Date().getFullYear()} Impak Niaga</span>
+          <span>&copy; {new Date().getFullYear()} {branding.companyName}</span>
           <span>{UI.footerText}</span>
         </div>
       </footer>
