@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Loader2, LogIn, LogOut } from 'lucide-react';
-import type { User } from 'firebase/auth';
+import { Download, Loader2 } from 'lucide-react';
 import type { Language } from '../types/proposal';
 import { uiLabels } from '../lib/i18n';
 
@@ -14,9 +13,6 @@ interface NavbarProps {
   isExportingPdf: boolean;
   onExportPdf: () => void;
   draftsCount: number;
-  user: User | null;
-  onSignIn: () => void;
-  onSignOut: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -27,9 +23,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   isExportingPdf,
   onExportPdf,
   draftsCount,
-  user,
-  onSignIn,
-  onSignOut,
 }) => {
   const T = uiLabels[language];
   const [logoError, setLogoError] = useState(false);
@@ -41,24 +34,22 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           type="button"
           onClick={() => onSelectTab('editor')}
-          className="flex items-center gap-3 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy rounded-md py-1 cursor-pointer"
+          aria-label="Impak Niaga"
+          className="flex items-center gap-2.5 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy rounded-md py-1 cursor-pointer"
         >
           {!logoError ? (
             <img
-              src="/src/assets/images/impak_niaga_logo_1794895342738.jpg"
+              src="/assets/aistudio/Logo_Impak_Niaga_9f4ce565.png"
               alt="Impak Niaga"
               referrerPolicy="no-referrer"
               onError={() => setLogoError(true)}
-              className="h-9 w-9 rounded-md object-contain border border-slate-200 bg-white shrink-0"
+              className="h-11 w-auto object-contain shrink-0"
             />
           ) : (
-            <span className="h-9 w-9 rounded-md bg-navy text-gold font-display font-bold text-sm flex items-center justify-center shrink-0">
-              IN
+            <span className="h-9 px-2.5 rounded-md bg-navy text-gold font-display font-bold text-sm flex items-center justify-center shrink-0">
+              Impak Niaga
             </span>
           )}
-          <span className="font-display text-lg font-bold tracking-tight text-navy whitespace-nowrap shrink-0">
-            Impak Niaga
-          </span>
         </button>
 
         {/* Zone 2: Single-Line Navigation Links */}
@@ -111,26 +102,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             {T.navGuide}
           </button>
-          {user ? (
-            <button
-              type="button"
-              onClick={onSignOut}
-              title={user.email || T.signOut}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-navy whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <span className="max-w-[140px] truncate">{user.displayName || user.email}</span>
-              <LogOut className="h-3.5 w-3.5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onSignIn}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-navy hover:underline underline-offset-4 whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <LogIn className="h-3.5 w-3.5" />
-              <span>{T.signInGoogle}</span>
-            </button>
-          )}
         </nav>
 
         {/* Zone 3: Single Primary CTA */}
@@ -193,13 +164,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}
         >
           {T.navGuide}
-        </button>
-        <button
-          type="button"
-          onClick={user ? onSignOut : onSignIn}
-          className="py-2.5 text-xs font-semibold text-navy whitespace-nowrap shrink-0"
-        >
-          {user ? T.signOut : T.signInGoogle}
         </button>
       </div>
     </header>

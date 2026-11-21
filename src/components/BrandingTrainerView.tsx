@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, X, Check, CloudUpload } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import type { BrandingSettings, Language, TrainerProfile } from '../types/proposal';
 import { compressImageToDataUrl } from '../lib/proposalUtils';
 
@@ -9,8 +9,6 @@ interface BrandingTrainerViewProps {
   onChangeBranding: (next: BrandingSettings) => void;
   trainerProfile: TrainerProfile;
   onChangeTrainerProfile: (next: TrainerProfile) => void;
-  isSignedIn: boolean;
-  onSaveToCloud: () => Promise<void>;
   onBackToEditor: () => void;
 }
 
@@ -20,13 +18,9 @@ export const BrandingTrainerView: React.FC<BrandingTrainerViewProps> = ({
   onChangeBranding,
   trainerProfile,
   onChangeTrainerProfile,
-  isSignedIn,
-  onSaveToCloud,
   onBackToEditor,
 }) => {
   const isEn = language === 'english';
-  const [saving, setSaving] = useState(false);
-  const [savedNotice, setSavedNotice] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
 
   const handleImageUpload = async (
@@ -45,17 +39,6 @@ export const BrandingTrainerView: React.FC<BrandingTrainerViewProps> = ({
     }
   };
 
-  const handleCloudSave = async () => {
-    setSaving(true);
-    try {
-      await onSaveToCloud();
-      setSavedNotice(true);
-      setTimeout(() => setSavedNotice(false), 2200);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
@@ -66,30 +49,11 @@ export const BrandingTrainerView: React.FC<BrandingTrainerViewProps> = ({
           </h1>
           <p className="mt-1 text-sm text-slate-600">
             {isEn
-              ? 'Customize your official letterhead, client logo, digital signature, company stamp, and lead trainer CV.'
-              : 'Tetapkan maklumat kepala surat rasmi, logo klien, tandatangan digital, cop syarikat, dan biodata penceramah.'}
+              ? 'Customize your official letterhead, client logo, digital signature, company stamp, and lead trainer CV. Changes save automatically in your browser.'
+              : 'Tetapkan maklumat kepala surat rasmi, logo klien, tandatangan digital, cop syarikat, dan biodata penceramah. Perubahan disimpan secara automatik dalam pelayar.'}
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          {isSignedIn && (
-            <button
-              type="button"
-              onClick={handleCloudSave}
-              disabled={saving}
-              className="inline-flex items-center gap-2 min-h-[40px] px-4 py-2 rounded-lg bg-gold text-navy text-sm font-semibold hover:bg-gold-light transition-colors whitespace-nowrap cursor-pointer disabled:opacity-60"
-            >
-              {savedNotice ? <Check className="h-4 w-4" /> : <CloudUpload className="h-4 w-4" />}
-              <span>
-                {savedNotice
-                  ? isEn
-                    ? 'Synced to Cloud'
-                    : 'Disimpan ke Awan'
-                  : isEn
-                  ? 'Save Settings to Cloud'
-                  : 'Simpan Tetapan ke Awan'}
-              </span>
-            </button>
-          )}
           <button
             type="button"
             onClick={onBackToEditor}

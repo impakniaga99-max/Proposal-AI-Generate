@@ -107,7 +107,6 @@ export interface SavedProposalDraft {
   createdAt: string;
   updatedAt?: string;
   status: ProposalStatus;
-  isCloud?: boolean;
   formData: ProposalFormData;
   aiContent: AIProposalContent;
 }

@@ -5,8 +5,6 @@ export interface UILabels {
   navBranding: string;
   navDrafts: string;
   navGuide: string;
-  signInGoogle: string;
-  signOut: string;
   downloadPdf: string;
   downloadingPdf: string;
   downloadWord: string;
@@ -76,10 +74,7 @@ export interface UILabels {
   draftsSearchPlaceholder: string;
   openDraft: string;
   deleteDraft: string;
-  cloudSyncedLabel: string;
   localOnlyLabel: string;
-  signInBannerTitle: string;
-  signInBannerDesc: string;
   guideHeading: string;
   footerText: string;
 }
@@ -150,10 +145,8 @@ export const uiLabels: Record<Language, UILabels> = {
   melayu: {
     navEditor: 'Penyedia Kertas Kerja',
     navBranding: 'Penjenamaan & Profil',
-    navDrafts: 'Draf Awan',
+    navDrafts: 'Rekod Draf',
     navGuide: 'Panduan Format',
-    signInGoogle: 'Log Masuk Google',
-    signOut: 'Log Keluar',
     downloadPdf: 'Muat Turun PDF',
     downloadingPdf: 'Menjana PDF...',
     downloadWord: 'Word (.docx)',
@@ -221,25 +214,19 @@ export const uiLabels: Record<Language, UILabels> = {
     refining: 'Menghalus...',
     draftsHeading: 'Rekod & Status Kertas Kerja',
     draftsEmpty:
-      'Tiada kertas kerja disimpan lagi. Jana dan simpan kertas kerja pertama anda untuk mengurus status serta akses dari mana-mana peranti.',
+      'Tiada kertas kerja disimpan lagi. Jana dan simpan kertas kerja pertama anda untuk mengurus status rekod secara tempatan.',
     draftsSearchPlaceholder: 'Cari nama program atau syarikat...',
     openDraft: 'Buka',
     deleteDraft: 'Padam',
-    cloudSyncedLabel: 'Disimpan dalam Awan (Firestore)',
     localOnlyLabel: 'Simpanan Pelayar Tempatan',
-    signInBannerTitle: 'Simpan & Akses Kertas Kerja dari Mana-Mana Peranti',
-    signInBannerDesc:
-      'Log masuk dengan akaun Google untuk menyegerakkan draf kertas kerja, status kelulusan klien, logo, dan profil penceramah ke pangkalan data awan.',
     guideHeading: 'Piawaian Struktur & Pengiraan Kertas Kerja Impak Niaga',
     footerText: 'Penjana Kertas Kerja AI · Dikuasakan oleh Impak Niaga',
   },
   english: {
     navEditor: 'Proposal Workbench',
     navBranding: 'Branding & Profile',
-    navDrafts: 'Cloud Drafts',
+    navDrafts: 'Saved Drafts',
     navGuide: 'Format Standard',
-    signInGoogle: 'Sign in with Google',
-    signOut: 'Sign Out',
     downloadPdf: 'Download PDF',
     downloadingPdf: 'Exporting PDF...',
     downloadWord: 'Word (.docx)',
@@ -307,15 +294,11 @@ export const uiLabels: Record<Language, UILabels> = {
     refining: 'Refining...',
     draftsHeading: 'Saved Proposals & Status Tracker',
     draftsEmpty:
-      'No saved proposals yet. Generate and save a proposal to track client status and access it anywhere.',
+      'No saved proposals yet. Generate and save a proposal to track client status locally.',
     draftsSearchPlaceholder: 'Search program or client name...',
     openDraft: 'Open',
     deleteDraft: 'Delete',
-    cloudSyncedLabel: 'Cloud Synced (Firestore)',
     localOnlyLabel: 'Local Browser Storage',
-    signInBannerTitle: 'Sync Proposals & Branding Across Devices',
-    signInBannerDesc:
-      'Sign in with Google to save your proposals, track client approval status, and sync your company letterhead, stamp, and trainer CV in the cloud.',
     guideHeading: 'Impak Niaga Proposal Structure & Costing Standard',
     footerText: 'AI Proposal Workbench · Powered by Impak Niaga',
   },

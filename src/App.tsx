@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FileText, ArrowRight } from 'lucide-react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import type {
@@ -14,23 +13,11 @@ import type {
 import { getSampleFormData, uiLabels } from './lib/i18n';
 import {
   calculateEndDateIso,
-  calculateFullBudget,
   getDefaultBrandingSettings,
   getDefaultTrainerProfile,
   getTodayIsoDate,
 } from './lib/proposalUtils';
 import { exportProposalToDocx } from './lib/docxExport';
-import {
-  auth,
-  deleteProposalFromCloud,
-  loadUserSettingsFromCloud,
-  saveProposalToCloud,
-  saveUserSettingsToCloud,
-  signInWithGoogle,
-  signOutUser,
-  subscribeUserProposals,
-  updateProposalStatusInCloud,
-} from './lib/firebase';
 import { Navbar, type WorkspaceTab } from './components/Navbar';
 import { ProposalForm } from './components/ProposalForm';
 import {
@@ -98,7 +85,10 @@ function createDefaultFormData(branding?: BrandingSettings): ProposalFormData {
   };
 }
 
-function normalizeFormData(raw: Partial<ProposalFormData>, branding: BrandingSettings): ProposalFormData {
+function normalizeFormData(
+  raw: Partial<ProposalFormData>,
+  branding: BrandingSettings
+): ProposalFormData {
   return {
     ...createDefaultFormData(branding),
     ...raw,
@@ -113,7 +103,9 @@ export default function App() {
   const [branding, setBranding] = useState<BrandingSettings>(() => {
     try {
       const raw = localStorage.getItem(BRANDING_STORAGE_KEY);
-      return raw ? { ...getDefaultBrandingSettings(), ...JSON.parse(raw) } : getDefaultBrandingSettings();
+      return raw
+        ? { ...getDefaultBrandingSettings(), ...JSON.parse(raw) }
+        : getDefaultBrandingSettings();
     } catch {
       return getDefaultBrandingSettings();
     }
@@ -122,7 +114,9 @@ export default function App() {
   const [trainerProfile, setTrainerProfile] = useState<TrainerProfile>(() => {
     try {
       const raw = localStorage.getItem(TRAINER_STORAGE_KEY);
-      return raw ? { ...getDefaultTrainerProfile(), ...JSON.parse(raw) } : getDefaultTrainerProfile();
+      return raw
+        ? { ...getDefaultTrainerProfile(), ...JSON.parse(raw) }
+        : getDefaultTrainerProfile();
     } catch {
       return getDefaultTrainerProfile();
     }
@@ -141,9 +135,7 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [justSavedDraft, setJustSavedDraft] = useState(false);
 
-  const [user, setUser] = useState<User | null>(null);
-  const [cloudDrafts, setCloudDrafts] = useState<SavedProposalDraft[]>([]);
-  const [localDrafts, setLocalDrafts] = useState<SavedProposalDraft[]>(() => {
+  const [drafts, setDrafts] = useState<SavedProposalDraft[]>(() => {
     try {
       const raw = localStorage.getItem(DRAFTS_STORAGE_KEY);
       if (!raw) return [];
@@ -160,7 +152,6 @@ export default function App() {
   const documentRef = useRef<HTMLDivElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Persist branding & trainer settings locally
   useEffect(() => {
     try {
       localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(branding));
@@ -179,80 +170,13 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(localDrafts));
+      localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
     } catch {
       // Ignore storage quota errors
     }
-  }, [localDrafts]);
+  }, [drafts]);
 
-  // Listen to Firebase Auth & Cloud Firestore subscriptions
-  useEffect(() => {
-    let unsubProposals: (() => void) | null = null;
-
-    const unsubAuth = onAuthStateChanged(auth, async (nextUser) => {
-      setUser(nextUser);
-
-      if (unsubProposals) {
-        unsubProposals();
-        unsubProposals = null;
-      }
-
-      if (nextUser) {
-        unsubProposals = subscribeUserProposals(
-          nextUser.uid,
-          (items) => setCloudDrafts(items),
-          (err) => {
-            console.error('Firestore subscription error:', err);
-          }
-        );
-
-        try {
-          const settings = await loadUserSettingsFromCloud(nextUser.uid);
-          if (settings?.branding) {
-            setBranding((prev) => ({ ...prev, ...settings.branding }));
-          }
-          if (settings?.trainerProfile) {
-            setTrainerProfile((prev) => ({ ...prev, ...settings.trainerProfile }));
-          }
-        } catch (err) {
-          console.error('Failed to load cloud settings:', err);
-        }
-      } else {
-        setCloudDrafts([]);
-      }
-    });
-
-    return () => {
-      unsubAuth();
-      if (unsubProposals) unsubProposals();
-    };
-  }, []);
-
-  const displayedDrafts = user ? cloudDrafts : localDrafts;
   const UI = uiLabels[formData.bahasa];
-
-  const handleSignIn = async () => {
-    setErrorMessage(null);
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      console.error('Sign in failed:', err);
-      setErrorMessage(
-        formData.bahasa === 'english'
-          ? 'Google sign-in could not be completed. Please try again.'
-          : 'Log masuk Google tidak berjaya dilengkapkan. Sila cuba semula.'
-      );
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOutUser();
-      setActiveProposalId(null);
-    } catch (err) {
-      console.error('Sign out failed:', err);
-    }
-  };
 
   const handleLoadSample = () => {
     const today = formData.tarikhMula || getTodayIsoDate();
@@ -304,7 +228,9 @@ export default function App() {
       const rawText = await response.text();
       let payload: { proposal?: AIProposalContent; error?: string } = {};
       try {
-        payload = rawText ? (JSON.parse(rawText) as { proposal?: AIProposalContent; error?: string }) : {};
+        payload = rawText
+          ? (JSON.parse(rawText) as { proposal?: AIProposalContent; error?: string })
+          : {};
       } catch {
         throw new Error(
           formData.bahasa === 'english'
@@ -401,68 +327,34 @@ export default function App() {
     }
   };
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = () => {
     if (!aiContent) return;
-    const budget = calculateFullBudget(formData);
 
-    if (user) {
-      const existingCloud = activeProposalId
-        ? cloudDrafts.some((d) => d.id === activeProposalId)
-        : false;
-      const docId =
-        existingCloud && activeProposalId
-          ? activeProposalId
-          : `prop_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const existingIdx = activeProposalId
+      ? drafts.findIndex((d) => d.id === activeProposalId)
+      : -1;
+    const docId =
+      existingIdx >= 0 && activeProposalId
+        ? activeProposalId
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-      try {
-        await saveProposalToCloud(
-          user.uid,
-          docId,
-          activeProposalStatus,
-          formData,
-          aiContent,
-          budget.grandTotal,
-          existingCloud
-        );
-        setActiveProposalId(docId);
-        setJustSavedDraft(true);
-        setTimeout(() => setJustSavedDraft(false), 2200);
-      } catch (err) {
-        console.error('Cloud save failed:', err);
-        setErrorMessage(
-          formData.bahasa === 'english'
-            ? 'Unable to save to cloud right now. Please try again.'
-            : 'Tidak dapat menyimpan ke pangkalan data awan buat masa ini.'
-        );
-      }
-    } else {
-      const existingLocalIdx = activeProposalId
-        ? localDrafts.findIndex((d) => d.id === activeProposalId)
-        : -1;
-      const docId =
-        existingLocalIdx >= 0 && activeProposalId
-          ? activeProposalId
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const nextDraft: SavedProposalDraft = {
+      id: docId,
+      createdAt:
+        existingIdx >= 0 ? drafts[existingIdx].createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: activeProposalStatus,
+      formData: { ...formData },
+      aiContent: { ...aiContent },
+    };
 
-      const nextDraft: SavedProposalDraft = {
-        id: docId,
-        createdAt:
-          existingLocalIdx >= 0 ? localDrafts[existingLocalIdx].createdAt : new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: activeProposalStatus,
-        isCloud: false,
-        formData: { ...formData },
-        aiContent: { ...aiContent },
-      };
-
-      setLocalDrafts((prev) => {
-        const filtered = prev.filter((d) => d.id !== docId);
-        return [nextDraft, ...filtered].slice(0, 25);
-      });
-      setActiveProposalId(docId);
-      setJustSavedDraft(true);
-      setTimeout(() => setJustSavedDraft(false), 2200);
-    }
+    setDrafts((prev) => {
+      const filtered = prev.filter((d) => d.id !== docId);
+      return [nextDraft, ...filtered].slice(0, 25);
+    });
+    setActiveProposalId(docId);
+    setJustSavedDraft(true);
+    setTimeout(() => setJustSavedDraft(false), 2200);
   };
 
   const handleOpenDraft = (draft: SavedProposalDraft) => {
@@ -475,39 +367,18 @@ export default function App() {
     setActiveTab('editor');
   };
 
-  const handleUpdateDraftStatus = async (id: string, status: ProposalStatus) => {
+  const handleUpdateDraftStatus = (id: string, status: ProposalStatus) => {
     if (id === activeProposalId) {
       setActiveProposalStatus(status);
     }
-    if (user) {
-      try {
-        await updateProposalStatusInCloud(id, status);
-      } catch (err) {
-        console.error('Status update failed:', err);
-      }
-    } else {
-      setLocalDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, status } : d)));
-    }
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, status } : d)));
   };
 
-  const handleDeleteDraft = async (id: string) => {
+  const handleDeleteDraft = (id: string) => {
     if (id === activeProposalId) {
       setActiveProposalId(null);
     }
-    if (user) {
-      try {
-        await deleteProposalFromCloud(id);
-      } catch (err) {
-        console.error('Cloud delete failed:', err);
-      }
-    } else {
-      setLocalDrafts((prev) => prev.filter((d) => d.id !== id));
-    }
-  };
-
-  const handleSaveSettingsToCloud = async () => {
-    if (!user) return;
-    await saveUserSettingsToCloud(user.uid, branding, trainerProfile);
+    setDrafts((prev) => prev.filter((d) => d.id !== id));
   };
 
   const handleExportDocx = async () => {
@@ -630,10 +501,7 @@ export default function App() {
         hasProposal={Boolean(aiContent)}
         isExportingPdf={isExportingPdf}
         onExportPdf={handleExportPdf}
-        draftsCount={displayedDrafts.length}
-        user={user}
-        onSignIn={handleSignIn}
-        onSignOut={handleSignOut}
+        draftsCount={drafts.length}
       />
 
       <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
@@ -724,19 +592,14 @@ export default function App() {
             onChangeBranding={setBranding}
             trainerProfile={trainerProfile}
             onChangeTrainerProfile={setTrainerProfile}
-            isSignedIn={Boolean(user)}
-            onSaveToCloud={handleSaveSettingsToCloud}
             onBackToEditor={() => setActiveTab('editor')}
           />
         )}
 
         {activeTab === 'drafts' && (
           <DraftsView
-            drafts={displayedDrafts}
+            drafts={drafts}
             language={formData.bahasa}
-            isSignedIn={Boolean(user)}
-            userEmail={user?.email || null}
-            onSignIn={handleSignIn}
             onOpenDraft={handleOpenDraft}
             onUpdateStatus={handleUpdateDraftStatus}
             onDeleteDraft={handleDeleteDraft}

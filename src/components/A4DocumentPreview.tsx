@@ -70,7 +70,7 @@ interface A4DocumentPreviewProps {
 const COVER_IMAGE_PATH = '/src/assets/images/proposal_cover_training_1794896623243.jpg';
 const WORKSHOP_IMAGE_PATH = '/src/assets/images/proposal_workshop_collab_1794896622483.jpg';
 const GROWTH_IMAGE_PATH = '/src/assets/images/proposal_impact_growth_1794896622888.jpg';
-const LOGO_IMAGE_PATH = '/src/assets/images/impak_niaga_logo_1794895342738.jpg';
+const LOGO_IMAGE_PATH = '/assets/aistudio/Logo_Impak_Niaga_9f4ce565.png';
 
 const ARIAL_FONT = 'Arial, Helvetica, sans-serif';
 
@@ -611,7 +611,7 @@ export const A4DocumentPreview: React.FC<A4DocumentPreviewProps> = ({
                         alt={branding.companyName}
                         referrerPolicy="no-referrer"
                         onError={() => markImageFailed('logo')}
-                        style={{ height: '42px', width: '42px', objectFit: 'contain' }}
+                        style={{ height: '48px', width: 'auto', objectFit: 'contain', flexShrink: 0 }}
                       />
                     )}
                     <div>
@@ -767,7 +767,7 @@ export const A4DocumentPreview: React.FC<A4DocumentPreviewProps> = ({
                       alt={branding.companyName}
                       referrerPolicy="no-referrer"
                       onError={() => markImageFailed('logo')}
-                      style={{ height: '36px', width: '36px', objectFit: 'contain' }}
+                      style={{ height: '42px', width: 'auto', objectFit: 'contain', flexShrink: 0 }}
                     />
                   )}
                   <div>
@@ -1909,22 +1909,33 @@ export const A4DocumentPreview: React.FC<A4DocumentPreviewProps> = ({
                     marginBottom: '16px',
                   }}
                 >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '12pt',
-                        fontWeight: 700,
-                        lineHeight: 1.3,
-                        color: '#002147',
-                      }}
-                    >
-                      {branding.companyName.toUpperCase()}
-                    </div>
-                    <div style={{ fontSize: '7.8pt', lineHeight: 1.4, color: '#475569' }}>
-                      {branding.regNo} · {branding.address}
-                    </div>
-                    <div style={{ fontSize: '7.8pt', lineHeight: 1.4, color: '#475569' }}>
-                      {branding.phone} · {branding.email}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {!failedImages.logo && (
+                      <img
+                        src={LOGO_IMAGE_PATH}
+                        alt={branding.companyName}
+                        referrerPolicy="no-referrer"
+                        onError={() => markImageFailed('logo')}
+                        style={{ height: '46px', width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+                      />
+                    )}
+                    <div>
+                      <div
+                        style={{
+                          fontSize: '12pt',
+                          fontWeight: 700,
+                          lineHeight: 1.3,
+                          color: '#002147',
+                        }}
+                      >
+                        {branding.companyName.toUpperCase()}
+                      </div>
+                      <div style={{ fontSize: '7.8pt', lineHeight: 1.4, color: '#475569' }}>
+                        {branding.regNo} · {branding.address}
+                      </div>
+                      <div style={{ fontSize: '7.8pt', lineHeight: 1.4, color: '#475569' }}>
+                        {branding.phone} · {branding.email}
+                      </div>
                     </div>
                   </div>
                   <div

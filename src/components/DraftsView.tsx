@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Trash2, ArrowUpRight, FileText, Cloud, HardDrive, LogIn } from 'lucide-react';
+import { Search, Trash2, ArrowUpRight, FileText, HardDrive } from 'lucide-react';
 import type { Language, ProposalStatus, SavedProposalDraft } from '../types/proposal';
 import { uiLabels } from '../lib/i18n';
 import { calculateFullBudget, formatRM } from '../lib/proposalUtils';
@@ -7,9 +7,6 @@ import { calculateFullBudget, formatRM } from '../lib/proposalUtils';
 interface DraftsViewProps {
   drafts: SavedProposalDraft[];
   language: Language;
-  isSignedIn: boolean;
-  userEmail: string | null;
-  onSignIn: () => void;
   onOpenDraft: (draft: SavedProposalDraft) => void;
   onUpdateStatus: (id: string, status: ProposalStatus) => void;
   onDeleteDraft: (id: string) => void;
@@ -28,9 +25,6 @@ const STATUS_STYLES: Record<ProposalStatus, string> = {
 export const DraftsView: React.FC<DraftsViewProps> = ({
   drafts,
   language,
-  isSignedIn,
-  userEmail,
-  onSignIn,
   onOpenDraft,
   onUpdateStatus,
   onDeleteDraft,
@@ -68,19 +62,8 @@ export const DraftsView: React.FC<DraftsViewProps> = ({
             {T.draftsHeading}
           </h1>
           <div className="mt-1 flex items-center gap-2 text-xs text-slate-600">
-            {isSignedIn ? (
-              <>
-                <Cloud className="h-3.5 w-3.5 text-emerald-600" />
-                <span>
-                  {T.cloudSyncedLabel} · {userEmail}
-                </span>
-              </>
-            ) : (
-              <>
-                <HardDrive className="h-3.5 w-3.5 text-slate-500" />
-                <span>{T.localOnlyLabel}</span>
-              </>
-            )}
+            <HardDrive className="h-3.5 w-3.5 text-slate-500" />
+            <span>{T.localOnlyLabel}</span>
           </div>
         </div>
 
@@ -97,24 +80,6 @@ export const DraftsView: React.FC<DraftsViewProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Cloud Sign-In Banner when Guest */}
-      {!isSignedIn && (
-        <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h2 className="font-display text-sm font-bold text-navy">{T.signInBannerTitle}</h2>
-            <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">{T.signInBannerDesc}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onSignIn}
-            className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 py-2 rounded-lg bg-navy text-white text-xs font-semibold hover:bg-navy-light transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            <LogIn className="h-4 w-4 text-gold" />
-            <span>{T.signInGoogle}</span>
-          </button>
-        </div>
-      )}
 
       {/* Status Filter Tabs */}
       {drafts.length > 0 && (
